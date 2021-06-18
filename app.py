@@ -8,12 +8,11 @@ from PIL import Image
 import numpy as np
 import base64
 import cv2
-# import matplotlib.pyplot as plt
-# import plotly.express as px
+
 import tensorflow as tf
 import os
 import datetime
-#os.chdir('C:/Users/nithi/OneDrive/Desktop/Our project')
+
 
 
 
@@ -219,23 +218,11 @@ def decode_img(string):
     return im
 
 def make_prediction(img):
-    interpreter = tf.lite.Interpreter(model_path='model1.tflite')
-    interpreter.allocate_tensors()
-    input_index = interpreter.get_input_details()[0]["index"]
-    output_index = [interpreter.get_output_details()[0]["index"],interpreter.get_output_details()[1]["index"]]
-    sample_img = img.reshape([1,256,256,1]).astype('float32')
-    
-    interpreter.set_tensor(input_index,sample_img)
-    interpreter.invoke()
-    
-    labels= interpreter.get_tensor(output_index[0])
-    predictions= interpreter.get_tensor(output_index[1])
-    
+    predictions = np.where(predictions>0.5,255,0)
     class_names =  ['Meningioma','Glioma', 'Pituitary tumor']
-    lab = int(np.argmax(labels))
+    lab = int(np.argmax(classes))
     lab = class_names[lab]
-    pred = np.where(predictions>0.5,255,0)
-    return pred,lab
+    return predictions,lab
 
 
 @app.callback(Output('Date','children'),
@@ -295,7 +282,10 @@ def update_output(list_of_contents):
     if list_of_contents is not None:
         image = decode_img(list_of_contents.split(',')[1])
         
-        masks,label = make_prediction(image)
+        model = tf.keras.models.load_model("final_model_s.h5")
+        pred,classes = model.predict(image)
+        masks,label = make_prediction(pred,classes)
+        
         global a
         a = label
         x = np.reshape(image,(256,256))*255.0
